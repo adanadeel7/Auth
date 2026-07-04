@@ -3,6 +3,7 @@ import { User } from "../models/User.models.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
+import transporter from "../config/nodemailer.js";
 
 async function Register(req, res) {
   const { name, email, password } = req.body;
@@ -42,15 +43,25 @@ async function Register(req, res) {
       httpOnly: true,
       secure: process.env.NODE_ENV === " production",
       sameSite: process.env.NODE_ENV === " production" ? "none" : "strict",
-      maxAge: 7*24*60*60*1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+
+    const mailOptions = {
+      from: process.env.SEND_EMAIL,
+      to: email,
+      subject: "Welcome to my Project",
+      text: `Welcome to my Project. Your Account has been created with email id: ${email}`,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res.json({ success: true, message: "Registered Successful" });
   } catch (error) {
     res.json({
       success: false,
       message: error.message,
     });
   }
-  return res.json({ success: true, message : "Registered Successful" });
 }
 
 async function Login(req, res) {
@@ -89,10 +100,10 @@ async function Login(req, res) {
       httpOnly: true,
       secure: process.env.NODE_ENV === " production",
       sameSite: process.env.NODE_ENV === " production" ? "none" : "strict",
-      maxAge: 7*24*60*60*1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.json({ success: true, message : "Logged In Successful" });
+    return res.json({ success: true, message: "Logged In Successful" });
   } catch (error) {
     return res.json({ success: false, message: error.message });
   }
@@ -108,12 +119,12 @@ async function Logout(req, res) {
     });
 
     return res.json({
-        success : true, 
-        message : "Logged Out"
-    })
+      success: true,
+      message: "Logged Out",
+    });
   } catch (error) {
     return res.json({ success: false, message: error.message });
   }
 }
 
-export { Login, Register , Logout };
+export { Login, Register, Logout };
