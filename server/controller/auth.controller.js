@@ -24,7 +24,7 @@ async function Register(req, res) {
       });
     }
 
-    const hashedPassword = await bcrupt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
       name,
@@ -42,7 +42,7 @@ async function Register(req, res) {
       httpOnly: true,
       secure: process.env.NODE_ENV === " production",
       sameSite: process.env.NODE_ENV === " production" ? "none" : "strict",
-      maxAge: "7*24*60*60*1000",
+      maxAge: 7*24*60*60*1000,
     });
   } catch (error) {
     res.json({
@@ -53,7 +53,7 @@ async function Register(req, res) {
   return res.json({ success: true, message : "Registered Successful" });
 }
 
-async function login(req, res) {
+async function Login(req, res) {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -89,7 +89,7 @@ async function login(req, res) {
       httpOnly: true,
       secure: process.env.NODE_ENV === " production",
       sameSite: process.env.NODE_ENV === " production" ? "none" : "strict",
-      maxAge: "7*24*60*60*1000",
+      maxAge: 7*24*60*60*1000,
     });
 
     return res.json({ success: true, message : "Logged In Successful" });
