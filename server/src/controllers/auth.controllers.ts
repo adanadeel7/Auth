@@ -230,3 +230,11 @@ async function loginHandler(req : Request, res:Response) {
         })
     }
 }
+
+
+export {
+    registerHandler, 
+    loginHandler, 
+    verifyEmailHandler, 
+    
+}
