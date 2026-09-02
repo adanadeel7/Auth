@@ -23,7 +23,7 @@ export async function sendEmail(to : string, subject : string, html : string) {
         secure : false, 
         auth : { 
             user, 
-            password
+            pass :password
         }
     })
 
