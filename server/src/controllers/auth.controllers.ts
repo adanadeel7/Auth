@@ -101,3 +101,51 @@ async function registerHandler(req :Request, res:Response) {
 
     }
 }
+
+async function verifyEmailHandler(req: Request, res:Response) { 
+    const token = req.query.token as string | undefined
+
+
+    if(!token) { 
+        return res.status(400).json({message: " Verification token is missing"})
+
+    }
+
+    try { 
+        if (!jwt_Secret) { 
+            throw Error("jwt Secret not in envoriment Variables")
+        }
+        
+        const payload =jwt.verify(token, jwt_Secret) as {
+            sub : string; 
+        }
+
+        const user = await User.findById(
+            payload.sub
+        )
+
+        if(!user) { 
+            return res.status(400).json({message : `User not Found`})
+
+
+        }
+
+        if (user.isEmailVerified) { 
+            return res.json({message : 'Email is already verified'})
+
+        }
+
+        user.isEmailVerified = true
+
+        await user.save()
+
+        return res.json({message : 'Email is now verified, Please Login'})
+
+
+
+    } catch(err) { 
+        return res.status(500).json({
+            message : "Internal Error"
+        })
+    }
+}
