@@ -3,7 +3,16 @@ import { User } from "../models/user.models.js";
 import { Request, Response } from "express";
 import registerSchema from "./auth.schema.js";
 import { hashPassword } from "../lib/hash.js";
+import jwt from "jsonwebtoken"
+import { sendEmail } from "../lib/nodemailer.js";
 
+
+
+const jwt_Secret = process.env.JWT_ACCESS_SECRET
+
+function getAppUrl() { 
+    return process.env.APP_URL
+}
 
 async function registerHandler(req :Request, res:Response) { 
     try { 
@@ -40,9 +49,55 @@ async function registerHandler(req :Request, res:Response) {
         })
 
 
-        // email verification 
+        // email verification
         
+        if (!jwt_Secret) { 
+            throw Error('Jwt_Secret not defined in environment variables')
+        }
+
+        const verifyToken = jwt.sign({
+            sub : newlyCreatedUser.id
+        }, 
+            jwt_Secret
+        , { 
+            expiresIn : '1d'
+        }
+    )
+
+
+    const verifyUrl = `${getAppUrl}/auth/verify-email?token=${verifyToken}`
+        
+
+    await sendEmail(
+        newlyCreatedUser.email, 
+        "Verify your email",
+        `
+            <p> please verify your email by clicking this link :</p>
+            <p> 
+                <a href=${verifyUrl}> 
+                ${verifyUrl} 
+                </a>
+            </p>
+
+        
+         `
+
+    )
+
+    return res.status(201).json({
+        message : 'user Registered', 
+        user : { 
+            id: newlyCreatedUser.id, 
+            email : newlyCreatedUser.email, 
+            role : newlyCreatedUser.role, 
+            isEmailVerified : newlyCreatedUser.isEmailVerified
+        } 
+    })
+
     } catch(err) { 
+        return res.status(500).json({
+            message : "Internal Error"
+        })
 
     }
 }
