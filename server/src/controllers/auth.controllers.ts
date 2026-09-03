@@ -6,7 +6,7 @@ import { checkPassword, hashPassword } from "../lib/hash.js";
 import jwt from "jsonwebtoken"
 import { sendEmail } from "../lib/nodemailer.js";
 import { createAccessToken, createRefreshToken,verifyRefreshToken } from "../lib/token.js";
-
+import crypto from "crypto"
 
 
 const jwt_Secret = process.env.JWT_ACCESS_SECRET
@@ -301,11 +301,67 @@ async function logoutHandler(req: Request, res : Response) {
     })
 }
 
+async function forgotPasswordHandler(req:Request, res:Response) { 
+    const {email} = req.body as {email?:string}
+
+    if(!email) {
+        return res.status(400).json({message:'Email is required'})
+    }
+
+    const normalizedEmail = email.toLowerCase().trim()
+
+    try { 
+        const user = await User.findOne({email : normalizedEmail})
+        
+        if(!user) { 
+            return res.json({
+                message : " If an account with this email exists, we will send you a reset link"
+            })
+        }
+
+        const rawToken = crypto.randomBytes(32).toString('hex')
+
+        const tokenHash = crypto.createHash('sha256').update(rawToken).toString()
+        
+        user.resetPassword = tokenHash
+        user.resetPasswordExpires = new Date(Date.now() + 15 * 60 * 1000)
+        
+        await user.save()
+        
+        const resetUrl = `${getAppUrl()}/auth/reset-password?token=${rawToken}`
+        await sendEmail(
+            user.email, 
+            "Reset Your Password", 
+            `<p>You Requested password reset. Click on the below link to reset the password</p>
+            <p> 
+                <a href= "${resetUrl}">
+                ${resetUrl}
+                </a>
+            </p>
+            `
+
+        )
+
+        return res.json({
+            message : "If an account with this email exists we will send you a reset link"
+            
+        })
+    
+    } catch(error) { 
+         console.log(error)
+         return res.status(500).json({
+            message : "Internal Error"
+        })
+    }
+
+}
+
 export {
     registerHandler, 
     loginHandler, 
     verifyEmailHandler,
     refreshHandler,
-    logoutHandler
+    logoutHandler,
+    forgotPasswordHandler
     
 }
