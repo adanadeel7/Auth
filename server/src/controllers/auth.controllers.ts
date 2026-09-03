@@ -5,7 +5,7 @@ import {registerSchema, loginSchema} from "./auth.schema.js";
 import { checkPassword, hashPassword } from "../lib/hash.js";
 import jwt from "jsonwebtoken"
 import { sendEmail } from "../lib/nodemailer.js";
-import { createAccessToken, createRefreshToken } from "../lib/token.js";
+import { createAccessToken, createRefreshToken,verifyRefreshToken } from "../lib/token.js";
 
 
 
@@ -232,9 +232,80 @@ async function loginHandler(req : Request, res:Response) {
 }
 
 
+async function refreshHandler(req : Request, res : Response) { 
+    try {
+      const token = req.cookies?.refreshToken as string | undefined
+      
+      if(!token) { 
+        return res.status(401).json({message : `Refresh Token Missing` })
+      }
+
+      const payload = verifyRefreshToken(token)
+
+      const user = await User.findById(payload.sub)
+
+      if(!user) { 
+        return res.status(401).json({message: 'User not found'})
+      }
+
+
+      if (user.tokenVersion !== payload.tokenVersion) { 
+            return res.status(401).json({message: 'Refresh token invalidated'})
+
+      }
+
+      const newAccessToken = createAccessToken(
+        user.id, 
+        user.role, 
+        user.tokenVersion
+      )
+
+      const newRefreshToken = createRefreshToken(user.id,user.tokenVersion)
+
+       const isProd = process.env.NODE_ENV === 'production'
+
+        res.cookie("refreshToken", newRefreshToken, { 
+            httpOnly : true, 
+            secure : isProd, 
+            sameSite : 'lax', 
+            maxAge : 7*24*60*60*1000
+        })
+
+         return res.status(200).json({ 
+            message: 'Login Success', 
+           accessToken: newAccessToken, 
+            user : { 
+                id : user.id,
+                email : user.email, 
+                role : user.role, 
+                isEmailVerified : user.isEmailVerified, 
+                twoFactorEnabled : user.twoFactorEnabled
+            }
+        })
+
+
+
+    } catch (error) { 
+        console.log(error)
+         return res.status(500).json({
+            message : "Internal Error"
+        })
+    }
+}
+
+async function logoutHandler(req: Request, res : Response) { 
+    res.clearCookie("refrestToken", {path: '/'})
+
+    return res.status(200).json({
+        message : "User logout"
+    })
+}
+
 export {
     registerHandler, 
     loginHandler, 
-    verifyEmailHandler, 
+    verifyEmailHandler,
+    refreshHandler,
+    logoutHandler
     
 }
